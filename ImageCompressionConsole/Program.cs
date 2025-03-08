@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
 
 namespace ImageCompressionConsole;
 
@@ -37,6 +38,29 @@ static class Program
     /// image quality and file size. It is used to apply lossy compression to JPEG images within the application.
     /// </remarks>
     private static readonly JpegEncoder JpegEncoder = new() { Quality = 75 };
+
+    /// <summary>
+    /// An instance of the WebpEncoder class, used to configure settings for encoding WEBP images.
+    /// </summary>
+    /// <remarks>
+    /// This instance is configured with a quality setting of 75, providing a balance between image quality and file size.
+    /// It applies lossy compression to WEBP images and uses the default encoding method for optimal performance.
+    /// </remarks>
+    private static readonly WebpEncoder WebpEncoder = new()
+    {
+        Quality = 75, // 壓縮品質（0-100 範圍），壓縮品質越低，文件越小但畫質越差
+        Method = WebpEncodingMethod.Default // 編碼方法（可選），默認為標準
+    };
+
+    /// <summary>
+    /// A collection of supported image file extensions utilized to filter image files for processing.
+    /// </summary>
+    /// <remarks>
+    /// This array contains the list of file extensions the application recognizes as valid image formats
+    /// for operations such as compression or processing. It ensures only files with supported extensions
+    /// are included in the workflow.
+    /// </remarks>
+    private static readonly string[] SupportedImageExtensions = [".jpg", ".png", ".webp"];
 
     static void Main(string[] args)
     {
@@ -94,14 +118,12 @@ static class Program
         }
 
         // 載入已處理檔案清單
-        HashSet<string> processedFiles = LoadProcessedFiles(recordFilePath);
-
+        var processedFiles = LoadProcessedFiles(recordFilePath);
 
         // 取得來源目錄下的所有圖檔，並按檔案大小排序，取前 10 個進行壓縮
         var imageFiles = Directory.GetFiles(sourceDirectory, "*.*")
-            .Where(file => (file.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                            file.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) &&
-                           !processedFiles.Contains(file))
+            .Where(file => SupportedImageExtensions.Contains(Path.GetExtension(file).ToLower()))
+            .Where(file => !processedFiles.Contains(file))
             .OrderByDescending(file => new FileInfo(file).Length)
             .Take(maxFilesToProcess);
 
@@ -116,13 +138,11 @@ static class Program
 
     private static void ImageCompressionProcess(string filePath, string outputDirectory)
     {
+        var fileName = Path.GetFileName(filePath);
+        var outputFilePath = Path.Combine(outputDirectory, fileName);
         try
         {
-            var fileExtension = Path.GetExtension(filePath).ToLower();
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            var outputFilePath = Path.Combine(outputDirectory, fileName + fileExtension);
-
-            ApplyLosslessCompression(filePath, fileExtension, outputFilePath);
+            ApplyLosslessCompression(filePath, outputFilePath);
 
             LogCompressionResults(filePath, outputFilePath);
         }
@@ -160,20 +180,25 @@ static class Program
     /// Applies lossless compression to an image file and saves the result to the specified output path.
     /// </summary>
     /// <param name="filePath">The path of the image file to be compressed.</param>
-    /// <param name="fileExtension">The file extension of the image (e.g., .jpg, .png).</param>
     /// <param name="outputFilePath">The path where the compressed image will be saved.</param>
-    private static void ApplyLosslessCompression(string filePath, string fileExtension, string outputFilePath)
+    private static void ApplyLosslessCompression(string filePath, string outputFilePath)
     {
         // 讀取圖檔
         using var image = Image.Load(filePath);
-        // 進行無損壓縮（此處僅示意調整參數，實際操作需根據需求測試調整）
-        if (fileExtension == ".jpg")
+        var fileExtension = Path.GetExtension(filePath).ToLower();
+        switch (fileExtension)
         {
-            image.Save(outputFilePath, JpegEncoder);
-        }
-        else if (fileExtension == ".png")
-        {
-            image.Save(outputFilePath, PngEncoder);
+            case ".jpg":
+                image.Save(outputFilePath, JpegEncoder);
+                return;
+            case ".png":
+                image.Save(outputFilePath, PngEncoder);
+                return;
+            case ".webp":
+                image.Save(outputFilePath, WebpEncoder);
+                return;
+            default:
+                throw new NotSupportedException($"檔案格式 {fileExtension} 不受支持");
         }
     }
 }
