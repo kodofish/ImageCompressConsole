@@ -75,14 +75,9 @@ static class Program
 
     private static HashSet<string> LoadProcessedFiles(string recordFilePath)
     {
-        // 如果紀錄檔不存在，返回空集合
-        if (!File.Exists(recordFilePath))
-        {
-            return new HashSet<string>();
-        }
-
-        // 將紀錄檔中的檔案路徑讀取為集合
-        return new HashSet<string>(File.ReadAllLines(recordFilePath));
+        return File.Exists(recordFilePath)
+            ? new HashSet<string>(File.ReadAllLines(recordFilePath))
+            : new HashSet<string>();
     }
 
     /// <summary>
