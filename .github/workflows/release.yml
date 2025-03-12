@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'  # 只有當 push tag vX.Y.Z 時才會觸發
 
+permissions:
+  contents: write
+  
 jobs:
   build:
     runs-on: ubuntu-latest
