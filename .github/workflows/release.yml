@@ -28,20 +28,15 @@ jobs:
 
       - name: Run tests
         run: dotnet test --configuration Release --no-restore --no-build --verbosity normal
-
-      - name: Publish application
-        run: dotnet publish -c Release -o ./publish
-
-      - name: Create release artifact
-        run: |
-          zip -r release.zip ./publish
-        shell: bash
-
+        
+      - name: Build and Pack .NET Tool
+        run: dotnet pack --configuration Release --output nupkgs
+            
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dotnet-app
-          path: release.zip
+          name: nuget-package
+          path: nupkgs/*.nupkg
 
   release:
     needs: build
@@ -50,16 +45,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download build artifact
+      - name: Download NuGet package
         uses: actions/download-artifact@v4
         with:
-          name: dotnet-app
-          path: ./release
+          name: nuget-package
+          path: ./nupkgs
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./release/release.zip
+          files: ./nupkgs/*.nupkg
           tag_name: ${{ github.ref_name }}
           release_name: Release ${{ github.ref_name }}
           body: "自動發布版本: ${{ github.ref_name }}"
@@ -67,3 +62,6 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Push to NuGet
+        run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
