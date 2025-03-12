@@ -64,7 +64,7 @@
       上述命令將顯示已安裝的運行時清單。確定列出了版本 `8.x.x` 的 ASP.NET Core Runtime。
    5. 配置路徑（如果安裝後無法執行 `dotnet` 指令）：
       ```bash
-     export PATH="$HOME/.dotnet/tools:$HOME/.dotnet:$PATH"
+      export PATH="$HOME/.dotnet/tools:$HOME/.dotnet:$PATH"
       ```
 - **macOS**:
    1. 使用 Homebrew 安裝 .NET Runtime：
@@ -113,10 +113,9 @@ dotnet tool uninstall -g ImageCompressionConsole
 
 ## 使用方式
 
-1. 編譯並執行此工具。
-2. 執行命令時提供參數：
+1. 執行命令時提供參數：
    ```bash
-   dotnet run -s <SourceDirectory> -o <OutputDirectory> -c <Count> -e <FileSizeLimit>
+   ImageCompressionConsole -s <SourceDirectory> -o <OutputDirectory> -c <Count> -e <FileSizeLimit>
    ```
     - `<SourceDirectory>`：來源圖片目錄。
     - `<OutputDirectory>`：處理後的圖片輸出目錄。
@@ -126,7 +125,7 @@ dotnet tool uninstall -g ImageCompressionConsole
 ### 範例執行
 以下命令將對指定來源資料夾中的圖片進行處理：
 ```bash
-dotnet run -s "./input" -o "./output" -c 100 -e 5
+ImageCompressionConsolen -s "./input" -o "./output" -c 100 -e 5
 ```
 
 ### 預期結果
@@ -151,17 +150,3 @@ dotnet run -s "./input" -o "./output" -c 100 -e 5
     - 在壓縮邏輯中，預設的 JPEG 壓縮品質為 `75`，可在 `ResizeImage` 方法中進行修改。
 
 ---
-
-## Usage
-
-### Command Line Arguments
-
-- `-s, --source` (required): The source directory containing the images to be compressed.
-- `-o, --output` (required): The output directory where the compressed images will be saved.
-- `-c, --count` (optional): The number of images to process. Default is 100.
-- `-e, --size` (optional): The number of image file size limit in MB. Default is 5.
-- 
-### Example
-
-```sh
-dotnet run -- -s "path/to/source" -o "path/to/output" -c 50
