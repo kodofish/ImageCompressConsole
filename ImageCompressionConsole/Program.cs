@@ -119,10 +119,22 @@ static class Program
         var imageFiles = Directory.GetFiles(sourceDirectory, "*.*")
             .Where(file => SupportedImageExtensions.Contains(Path.GetExtension(file).ToLower()))
             .Where(file => !processedFiles.Contains(file))
-            .OrderByDescending(file => new FileInfo(file).Length)
-            .Take(maxFilesToProcess);
+            .Select(file => new { Path = file, Size = new FileInfo(file).Length })
+            .OrderByDescending(file => file.Size)
+            .AsEnumerable();
 
-        foreach (var filePath in imageFiles)
+        Console.WriteLine($"開始處理圖檔...{imageFiles.Count()} 個圖檔，最多處理 {maxFilesToProcess} 個圖檔\n");
+
+        imageFiles = imageFiles.Take(maxFilesToProcess);
+
+        // 如果沒有圖檔，則不進行處理
+        if (!imageFiles.Any())
+        {
+            Console.WriteLine("沒有圖檔需要處理");
+            return;
+        }
+
+        foreach (var filePath in imageFiles.Select(file => file.Path))
         {
             ImageCompressionProcess(filePath, outputDirectory);
             SaveProcessedFile(recordFilePath, filePath);
