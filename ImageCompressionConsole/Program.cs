@@ -1,12 +1,12 @@
 ﻿using CommandLine;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace ImageCompressionConsole;
-
-//todo: 1. 圖檔 size 為 1320 X 1320
 
 public class Options
 {
@@ -18,15 +18,15 @@ public class Options
 
     [Option('c', "count", Required = false, Default = 100, HelpText = "要處理的圖片數量, 預設為 100")]
     public int Count { get; set; }
-    
-    // 新增檔案大小限制屬性，以 MB 為單位
-    [Option('s', "size", Required = false, Default = 5, HelpText = "要處理的圖片大小限制, 預設為 5MB")]
-    public double FileSizeLimit { get; set; }
 
+    [Option('e', "size", Required = false, Default = 5, HelpText = "要處理的圖片大小限制, 預設為 5MB")]
+    public double FileSizeLimit { get; set; }
 }
 
 static class Program
 {
+    private const int MaxWidth = 1320;
+
     /// <summary>
     /// An instance of the PngEncoder class, used to configure settings for encoding PNG images.
     /// </summary>
@@ -100,39 +100,32 @@ static class Program
 
     private static void ProcessDirectoryOptions(Options options)
     {
-        // 由參數取得來源目錄和輸出目錄
         var sourceDirectory = options.SourceDirectory;
         var outputDirectory = options.OutputDirectory;
         var recordFilePath = Path.Combine(outputDirectory, "processed_files.txt"); // 紀錄檔案的路徑
         var maxFilesToProcess = options.Count;
         var fileSizeLimit = options.FileSizeLimit * 1024 * 1024;
 
-        // 驗證來源目錄是否存在
         if (!Directory.Exists(sourceDirectory))
         {
             Console.WriteLine($"來源目錄不存在: {sourceDirectory}");
             return;
         }
 
-        // 如果輸出目錄不存在，創建它
         if (!Directory.Exists(outputDirectory))
-        {
             Directory.CreateDirectory(outputDirectory);
-        }
 
-        // 載入已處理檔案清單
         var processedFiles = LoadProcessedFiles(recordFilePath);
 
-        // 取得來源目錄下的所有圖檔，並按檔案大小排序，取前 10 個進行壓縮
         var imageFiles = Directory.GetFiles(sourceDirectory, "*.*")
             .Where(file => SupportedImageExtensions.Contains(Path.GetExtension(file).ToLower()))
             .Where(file => !processedFiles.Contains(file))
             .Select(file => new { Path = file, Size = new FileInfo(file).Length })
-            .Where(files => files.Size > fileSizeLimit) // 過濾檔案大小
+            .Where(files => files.Size > fileSizeLimit)
             .OrderByDescending(file => file.Size)
             .AsEnumerable();
 
-        Console.WriteLine($"開始處理圖檔...{imageFiles.Count()} 個圖檔，最多處理 {maxFilesToProcess} 個圖檔\n");
+        Console.WriteLine($"開始處理圖檔...總計 {imageFiles.Count()} 個圖檔，最多處理 {maxFilesToProcess} 個圖檔\n");
 
         imageFiles = imageFiles.Take(maxFilesToProcess);
 
@@ -145,20 +138,26 @@ static class Program
 
         foreach (var filePath in imageFiles.Select(file => file.Path))
         {
-            ImageCompressionProcess(filePath, outputDirectory);
+            ImageCompressionProcess(filePath, outputDirectory, MaxWidth);
             SaveProcessedFile(recordFilePath, filePath);
         }
 
         Console.WriteLine("所有圖檔已完成處理");
     }
 
-    private static void ImageCompressionProcess(string filePath, string outputDirectory)
+    /// <summary>
+    /// 壓縮指定的圖片檔案，並將結果存儲到指定的輸出目錄中。
+    /// </summary>
+    /// <param name="filePath">要壓縮的圖片檔案路徑。</param>
+    /// <param name="outputDirectory">存放壓縮後圖片檔案的目錄。</param>
+    /// <param name="maxWidth">壓縮圖片的最大寬度限制。</param>
+    private static void ImageCompressionProcess(string filePath, string outputDirectory, int maxWidth)
     {
         var fileName = Path.GetFileName(filePath);
         var outputFilePath = Path.Combine(outputDirectory, fileName);
         try
         {
-            ApplyLosslessCompression(filePath, outputFilePath);
+            ApplyLosslessCompression(filePath, outputFilePath, maxWidth);
 
             LogCompressionResults(filePath, outputFilePath);
         }
@@ -169,11 +168,10 @@ static class Program
     }
 
     /// <summary>
-    /// Logs the compression results by displaying the sizes of the original and compressed files,
-    /// as well as the reduction in size and percentage decrease.
+    /// 紀錄壓縮結果，顯示原始檔案與壓縮檔案的大小，並計算檔案大小減少量及百分比。
     /// </summary>
-    /// <param name="filePath">The path of the original file before compression.</param>
-    /// <param name="outputFilePath">The path of the compressed file after the process.</param>
+    /// <param name="filePath">壓縮前原始檔案的路徑。</param>
+    /// <param name="outputFilePath">壓縮後檔案的儲存路徑。</param>
     private static void LogCompressionResults(string filePath, string outputFilePath)
     {
         // 原始檔案大小
@@ -193,28 +191,73 @@ static class Program
     }
 
     /// <summary>
-    /// Applies lossless compression to an image file and saves the result to the specified output path.
+    /// 對影像檔案進行無失真壓縮，並將壓縮後的結果儲存至指定的輸出路徑。
     /// </summary>
-    /// <param name="filePath">The path of the image file to be compressed.</param>
-    /// <param name="outputFilePath">The path where the compressed image will be saved.</param>
-    private static void ApplyLosslessCompression(string filePath, string outputFilePath)
+    /// <param name="filePath">需要壓縮的影像檔案路徑。</param>
+    /// <param name="outputFilePath">壓縮後影像的儲存路徑。</param>
+    /// <param name="maxWidth">影像壓縮後的最大寬度。如果影像寬度超過此值，將按照比例調整大小。</param>
+    private static void ApplyLosslessCompression(string filePath, string outputFilePath, int maxWidth)
     {
-        // 讀取圖檔
-        using var image = Image.Load(filePath);
         var fileExtension = Path.GetExtension(filePath).ToLower();
         switch (fileExtension)
         {
             case ".jpg":
-                image.Save(outputFilePath, JpegEncoder);
+                ResizeImage(filePath, outputFilePath, maxWidth, JpegEncoder);
                 return;
             case ".png":
-                image.Save(outputFilePath, PngEncoder);
+                ResizeImage(filePath, outputFilePath, maxWidth, PngEncoder);
                 return;
             case ".webp":
-                image.Save(outputFilePath, WebpEncoder);
+                ResizeImage(filePath, outputFilePath, maxWidth, WebpEncoder);
                 return;
             default:
                 throw new NotSupportedException($"檔案格式 {fileExtension} 不受支持");
         }
+    }
+
+    /// <summary>
+    /// 調整圖片大小以適應指定的最大寬度，同時保持原始比例，
+    /// 並使用指定的編碼器將調整後的圖片儲存到輸出檔案路徑。
+    /// </summary>
+    /// <param name="inputFilePath">要調整大小的來源圖片文件的檔案路徑。</param>
+    /// <param name="outputFilePath">儲存調整後圖片的目標檔案路徑。</param>
+    /// <param name="maxWidth">調整後圖片的最大寬度。</param>
+    /// <param name="encoder">用於儲存調整後圖片的影像編碼器。</param>
+    private static void ResizeImage(string inputFilePath, string outputFilePath, int maxWidth,
+        ImageEncoder encoder)
+    {
+        using var image = Image.Load(inputFilePath);
+        if (image.IsSizeAcceptable(maxWidth))
+        {
+            // 直接複製圖片到輸出路徑
+            image.Save(outputFilePath, encoder);
+            return;
+        }
+
+        // 計算新的寬高比，維持原始比例
+        var resizeOptions = new ResizeOptions
+        {
+            Size = new Size(maxWidth, 0),
+            Mode = ResizeMode.Max // 確保圖片寬/高同時限制在最大值內，比例不變
+        };
+        image.Mutate(x => x.Resize(resizeOptions));
+
+        image.Save(outputFilePath, encoder);
+    }
+}
+
+public static class ImageExtensions
+{
+    /// <summary>
+    /// 判斷圖片的寬度是否在允許的範圍內。
+    /// </summary>
+    /// <param name="image">要檢查的圖片實例。</param>
+    /// <param name="width">允許的最大寬度。</param>
+    /// <returns>
+    /// 如果圖片的寬度小於或等於指定的最大寬度，則返回 true；否則返回 false。
+    /// </returns>
+    public static bool IsSizeAcceptable(this Image image, int width)
+    {
+        return image.Width <= width;
     }
 }
