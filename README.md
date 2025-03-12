@@ -27,10 +27,89 @@
 ---
 
 ## 系統需求
-- **.NET 8.0** 或以上版本
-- 平台支援：Windows、macOS、Linux
+- **.NET 8 SDK** 或以上版本
+- 支援的作業系統：
+   - Windows
+   - macOS
+   - Linux
+
+如尚未安裝 .NET 8 SDK，請參考下方的安裝步驟。
 
 ---
+## 安裝 .NET 8 SDK
+
+若系統未預先安裝 **.NET 8 SDK**，請依照以下指引操作：
+
+- **Linux**:
+   1. 安裝相依套件：
+      ```bash
+      sudo apt update
+      sudo apt install -y lsb-release
+      sudo apt install -y wget apt-transport-https ca-certificates
+      ```
+   2. 執行以下指令來新增 Microsoft 的官方 APT 儲存庫：
+      ```bash
+      wget https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+      sudo dpkg -i packages-microsoft-prod.deb
+      sudo apt update
+      ```
+   3. 安裝 .NET 8 SDK：
+      ```bash
+      sudo apt install -y dotnet-sdk-8.0
+      ``` 
+   4. 若想確認安裝是否成功，可以執行：
+      ```bash
+      dotnet --list-skds
+      ```
+      上述命令將顯示已安裝的運行時清單。確定列出了版本 `8.x.x` 的 ASP.NET Core Runtime。
+   5. 配置路徑（如果安裝後無法執行 `dotnet` 指令）：
+      ```bash
+     export PATH="$HOME/.dotnet/tools:$HOME/.dotnet:$PATH"
+      ```
+- **macOS**:
+   1. 使用 Homebrew 安裝 .NET Runtime：
+      ```bash
+      brew install --cask dotnet
+      ```
+   2. 配置路徑（如果安裝後無法執行 `dotnet` 指令）：
+      ```bash
+      export PATH="$PATH:/usr/local/share/dotnet"
+      ```
+
+- **Windows**:
+   1. [點擊此處下載 .NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0/runtime)。
+   2. 下載後執行安裝程式，並按照安裝指示完成安裝。
+
+#### 驗證 .NET 安裝
+安裝完成後可以執行以下命令，檢查系統上是否已成功安裝 .NET：
+```bash
+dotnet --version
+```
+若顯示的版本是 `8.x.x` 或以上，即表示安裝成功。
+
+---
+
+## 安裝方式
+
+此程式已釋出為 .NET 全球工具，可通過 NuGet 平台進行安裝。
+
+### 1. 安裝 .NET 全球工具
+使用以下命令將此工具安裝到系統中：
+```bash
+dotnet tool install --global ImageCompressionConsole
+```
+
+### 2. 更新工具版本
+如果已安裝此工具，並且希望更新至最新版本，請執行以下命令：
+```bash
+dotnet tool update -g ImageCompressionConsole
+```
+
+### 3. 卸載工具
+如需從系統中移除此工具，可使用以下命令：
+```bash
+dotnet tool uninstall -g ImageCompressionConsole
+```
 
 ## 使用方式
 
@@ -51,7 +130,7 @@ dotnet run -s "./input" -o "./output" -c 100 -e 5
 ```
 
 ### 預期結果
-- 檔案大小超過 5MB 且寬度超過 1320px 的圖片會被縮小，並進行無損壓縮。
+- 檔案大小超過 5MB 且寬度超過 1320px 的圖片會被縮小，並進行壓縮。
 - 所有處理後的圖片將儲存於 `./output` 資料夾中。
 - 處理過的檔案名稱會自動記錄，避免重複處理。
 
@@ -61,15 +140,6 @@ dotnet run -s "./input" -o "./output" -c 100 -e 5
 此工具使用了以下技術：
 - **C# 12.0**
 - **SixLabors.ImageSharp** (處理圖片縮放與壓縮)
-
----
-
-## 注意事項
-- 輸出的圖片格式目前僅支援 JPEG 格式。
-- 項目開發時需要預先安裝 `SixLabors.ImageSharp` 套件：
-   ```bash
-   dotnet add package SixLabors.ImageSharp
-   ```
 
 ---
 
