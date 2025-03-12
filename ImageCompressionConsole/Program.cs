@@ -6,6 +6,8 @@ using SixLabors.ImageSharp.Formats.Webp;
 
 namespace ImageCompressionConsole;
 
+//todo: 1. 圖檔 size 為 1320 X 1320
+
 public class Options
 {
     [Option('s', "source", Required = true, Default = null, HelpText = "來源目錄，包含要壓縮的圖片檔案")]
@@ -16,6 +18,11 @@ public class Options
 
     [Option('c', "count", Required = false, Default = 100, HelpText = "要處理的圖片數量, 預設為 100")]
     public int Count { get; set; }
+    
+    // 新增檔案大小限制屬性，以 MB 為單位
+    [Option('s', "size", Required = false, Default = 5, HelpText = "要處理的圖片大小限制, 預設為 5MB")]
+    public double FileSizeLimit { get; set; }
+
 }
 
 static class Program
@@ -98,6 +105,7 @@ static class Program
         var outputDirectory = options.OutputDirectory;
         var recordFilePath = Path.Combine(outputDirectory, "processed_files.txt"); // 紀錄檔案的路徑
         var maxFilesToProcess = options.Count;
+        var fileSizeLimit = options.FileSizeLimit * 1024 * 1024;
 
         // 驗證來源目錄是否存在
         if (!Directory.Exists(sourceDirectory))
@@ -120,6 +128,7 @@ static class Program
             .Where(file => SupportedImageExtensions.Contains(Path.GetExtension(file).ToLower()))
             .Where(file => !processedFiles.Contains(file))
             .Select(file => new { Path = file, Size = new FileInfo(file).Length })
+            .Where(files => files.Size > fileSizeLimit) // 過濾檔案大小
             .OrderByDescending(file => file.Size)
             .AsEnumerable();
 
