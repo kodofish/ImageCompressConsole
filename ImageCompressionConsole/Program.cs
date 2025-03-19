@@ -97,7 +97,6 @@ static class Program
         File.AppendAllText(recordFilePath, filePath + Environment.NewLine);
     }
 
-
     private static void ProcessDirectoryOptions(Options options)
     {
         var sourceDirectory = options.SourceDirectory;
@@ -171,13 +170,14 @@ static class Program
     /// 紀錄壓縮結果，顯示原始檔案與壓縮檔案的大小，並計算檔案大小減少量及百分比。
     /// </summary>
     /// <param name="filePath">壓縮前原始檔案的路徑。</param>
-    /// <param name="outputFilePath">壓縮後檔案的儲存路徑。</param>
-    private static void LogCompressionResults(string filePath, string outputFilePath)
+    /// <param name="compressedFilePath">壓縮後檔案的儲存路徑。</param>
+    private static void LogCompressionResults(string filePath, string compressedFilePath)
     {
         // 原始檔案大小
         var originalSize = new FileInfo(filePath).Length;
         // 壓縮後檔案大小
-        var compressedSize = new FileInfo(outputFilePath).Length;
+        var compressedFileInfo = new FileInfo(compressedFilePath);
+        var compressedSize = compressedFileInfo.Length;
 
         // 計算壓縮後與壓縮前的差異
         var sizeDifference = originalSize - compressedSize;
@@ -187,7 +187,16 @@ static class Program
         Console.WriteLine($"處理完成：{filePath}");
         Console.WriteLine($"原始大小：{originalSize / 1024.0:F2} KB");
         Console.WriteLine($"壓縮後大小：{compressedSize / 1024.0:F2} KB");
-        Console.WriteLine($"大小減少：{sizeDifference / 1024.0:F2} KB ({sizeDifferencePercentage:F2}%)\n");
+        Console.WriteLine($"大小減少：{sizeDifference / 1024.0:F2} KB ({sizeDifferencePercentage:F2}%)");
+
+        if (compressedSize > originalSize)
+        {
+            Console.WriteLine($"壓縮後的檔案大小無縮小，刪除檔案: {compressedFilePath}");
+
+            compressedFileInfo.Delete(); // 刪除壓縮後的檔案
+        }
+
+        Console.WriteLine("\n");
     }
 
     /// <summary>
