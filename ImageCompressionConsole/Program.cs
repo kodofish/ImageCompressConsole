@@ -25,7 +25,7 @@ public class Options
 
 static class Program
 {
-    private const int MaxWidth = 1320;
+    private const int MaxWidth = 2400;
 
     /// <summary>
     /// An instance of the PngEncoder class, used to configure settings for encoding PNG images.
