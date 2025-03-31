@@ -67,7 +67,7 @@ static class Program
     /// for operations such as compression or processing. It ensures only files with supported extensions
     /// are included in the workflow.
     /// </remarks>
-    private static readonly string[] SupportedImageExtensions = [".jpg", ".png", ".webp"];
+    private static readonly string[] SupportedImageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
     static void Main(string[] args)
     {
@@ -211,6 +211,7 @@ static class Program
         switch (fileExtension)
         {
             case ".jpg":
+            case ".jpeg":
                 ResizeImage(filePath, outputFilePath, maxWidth, JpegEncoder);
                 return;
             case ".png":
